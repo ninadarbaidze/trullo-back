@@ -1,0 +1,9 @@
+.vscode
+.env
+/node_modules
+node_modules
+build
+
+**/.DS_Store
+
+images/*
