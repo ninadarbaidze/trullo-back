@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Board {
+  id Int @id @default(autoincrement())
+  name String
+  columns Column[]
+  tasks Task[]
+  // columnOrder ColumnOrder?
+}
+
+// model ColumnOrder {
+//   id Int @id @default(autoincrement())
+//   columnId String
+//   columns Column[]
+//   board Board @relation(fields: [boardId], references: [id])
+//   boardId Int @unique
+// }
+
+model Column {
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(255)
+  board Board @relation(fields: [boardId], references: [id])
+  boardId Int
+  // columnOrder ColumnOrder @relation(fields: [columnOrderId], references: [id])
+  // columnOrderId Int
+  columnPosition Int
+  tasks Task[]
+}
+
+model Task {
+  id Int @id @default(autoincrement())
+  taskPosition Int
+  content String
+  column Column? @relation(fields: [columnId], references: [id])
+  columnId Int?
+  board Board @relation(fields: [boardId], references: [id])
+  boardId Int @default(1)
+}
+
