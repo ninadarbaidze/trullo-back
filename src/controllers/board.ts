@@ -3,89 +3,21 @@ import { Request, Response } from 'express'
 
 const prisma = new PrismaClient()
 
-export const createBoardd = async (req: Request, res: Response) => {
-  const { tasks, columns, sourceCol, destCol, prevIndex, nextIndex } = req.body
-  const { task } = req.params
-
-  console.log(task)
-  const arrayOfColumns = Object.keys(columns).map((key) => columns[key])
-  const arrayOfTasks = Object.keys(tasks).map((key) => tasks[key])
-  //   const arrayOfsourceCol = Object.keys(sourceCol).map((key) => sourceCol[key])
-  //   const arrayOfdestCol = Object.keys(destCol).map((key) => destCol[key])
-  console.log(sourceCol, destCol)
-
-  try {
-    if (task) {
-      // source
-
-      //   await prisma.column.update({
-      //     where: {
-      //         id: sourceCol
-      //     },
-      //     data: {
-      //         tasks: {
-      //             disconnect: { id: taskId },
-      //         }
-      //     }
-      //   })
-      //dest
-      const currColumn = arrayOfColumns.find((item) => item.id === destCol)
-
-      await prisma.column.update({
-        where: {
-          id: destCol,
-        },
-        data: {
-          tasks: {
-            set: [{ id: 4 }, { id: 3 }],
-          },
-        },
-      })
-    } else {
-      // await prisma.board.create({
-      //     data: {
-      //       columns: {
-      //         create: arrayOfColumns.map((column) => ({
-      //           columnId: column.columnId,
-      //           title: column.title,
-      //           tasks: {
-      //             create: arrayOfTasks
-      //               .filter((task) => column.taskIds.includes(task.taskId))
-      //               .map((task) => ({
-      //                 taskId: task.taskId,
-      //                 content: task.content,
-      //               })),
-      //           },
-      //         })),
-      //       },
-      //     },
-      //   });
-    }
-    res.json({ message: 'success' })
-  } catch (err: any) {
-    return res.status(500).json({
-      message: err.message,
-    })
-  }
-
-  //   res.json({ message: 'ola girls' })
-}
-
 export const reorderTask = async (req: Request, res: Response) => {
   const { taskId } = req.params
-  const { columnId, isChangingColumn, prevTask, nextTask } = req.body
+  const { columnId, isChangingColumn, prevTaskId, nextTaskId } = req.body
 
-  let newTaskPosition = 1024
+  let newTaskPosition
 
   try {
-    if (prevTask === undefined && nextTask === undefined) {
+    if (prevTaskId === undefined && nextTaskId === undefined) {
       newTaskPosition = 1024
-    } else if (prevTask === undefined) {
-      newTaskPosition = nextTask - 512
-    } else if (nextTask === undefined) {
-      newTaskPosition = prevTask + 512
+    } else if (prevTaskId === undefined) {
+      newTaskPosition = nextTaskId - 512
+    } else if (nextTaskId === undefined) {
+      newTaskPosition = prevTaskId + 512
     } else {
-      newTaskPosition = Math.floor((prevTask + nextTask) / 2)
+      newTaskPosition = Math.floor((prevTaskId + nextTaskId) / 2)
     }
 
     if (!isChangingColumn) {
@@ -98,6 +30,7 @@ export const reorderTask = async (req: Request, res: Response) => {
         },
       })
     } else {
+      console.log('me')
       await prisma.task.update({
         where: {
           id: +taskId,
@@ -112,8 +45,8 @@ export const reorderTask = async (req: Request, res: Response) => {
     }
 
     if (
-      Math.abs(newTaskPosition - prevTask) <= 1 ||
-      Math.abs(newTaskPosition - nextTask) <= 1
+      Math.abs(newTaskPosition - prevTaskId) <= 1 ||
+      Math.abs(newTaskPosition - nextTaskId) <= 1
     ) {
       const orderedData = await prisma.task.findMany({
         where: {
@@ -148,6 +81,73 @@ export const reorderTask = async (req: Request, res: Response) => {
   }
 }
 
+export const reorderColumn = async (req: Request, res: Response) => {
+  const { columnId } = req.params
+  const { boardId, prevColumnId, nextColumnId } = req.body
+
+  let newColumnPosition
+
+  try {
+    if (prevColumnId === undefined && nextColumnId === undefined) {
+      newColumnPosition = 1024
+    } else if (prevColumnId === undefined) {
+      newColumnPosition = nextColumnId - 512
+    } else if (nextColumnId === undefined) {
+      newColumnPosition = prevColumnId + 512
+    } else {
+      newColumnPosition = Math.floor((prevColumnId + nextColumnId) / 2)
+    }
+
+    
+     await prisma.column.update({
+      where: {
+        id: +columnId,
+      },
+      data: {
+        columnPosition: newColumnPosition,
+      },
+    })
+
+
+    if (
+      Math.abs(newColumnPosition - prevColumnId) <= 1 ||
+      Math.abs(newColumnPosition - prevColumnId) <= 1
+    ) {
+      const orderedData = await prisma.column.findMany({
+        where: {
+          boardId: +boardId,
+        },
+        select: {
+          id: true,
+          columnPosition: true,
+        },
+        orderBy: {
+          columnPosition: 'asc',
+        },
+      })
+
+      console.log(orderedData)
+
+      await Promise.all(
+        orderedData.map(async (data, index) => {
+          await prisma.column.updateMany({
+            where: {
+              id: data.id,
+            },
+            data: {
+              columnPosition: (index + 1) * 1024,
+            },
+          })
+        })
+      )
+    }
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    console.error(err)
+  }
+}
+
 export const createTask = async (req: Request, res: Response) => {
   const { columnId } = req.params
   const { content, prevIndex } = req.body
@@ -170,12 +170,12 @@ export const createTask = async (req: Request, res: Response) => {
 
 export const createColumn = async (req: Request, res: Response) => {
   const { boardId } = req.params
-  const { title } = req.body
+  const { title , prevIndex} = req.body
   try {
     const response = await prisma.column.create({
       data: {
         title: title,
-        columnPosition: 1,
+        columnPosition: prevIndex ? prevIndex + 1024 : 1024,
         board: {
           connect: { id: +boardId },
         },
@@ -196,7 +196,9 @@ export const createBoard = async (req: Request, res: Response) => {
       },
     })
     res.json({ message: 'success' })
-  } catch (err) {}
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 export const getBoard = async (req: Request, res: Response) => {
@@ -241,12 +243,13 @@ export const getBoard = async (req: Request, res: Response) => {
         },
       }
     }, {})
-    console.log(columnsObject)
 
     const formattedData = {
       tasks: tasksObject,
       columns: columnsObject,
-      columnOrder: board?.columns.map((column) => `column-${column.id}`),
+      columnOrder: board?.columns
+        .sort((a, b) => (a.columnPosition > b.columnPosition ? 1 : -1))
+        .map((column) => `column-${column.id}`),
     }
 
     res.json({ ...formattedData })
