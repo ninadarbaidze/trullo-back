@@ -13,35 +13,28 @@ model Board {
   name String
   columns Column[]
   tasks Task[]
-  // columnOrder ColumnOrder?
 }
-
-// model ColumnOrder {
-//   id Int @id @default(autoincrement())
-//   columnId String
-//   columns Column[]
-//   board Board @relation(fields: [boardId], references: [id])
-//   boardId Int @unique
-// }
 
 model Column {
   id Int @id @default(autoincrement())
   title String @db.VarChar(255)
-  board Board @relation(fields: [boardId], references: [id])
+  board Board @relation(fields: [boardId], references: [id],  onDelete: Cascade)
   boardId Int
-  // columnOrder ColumnOrder @relation(fields: [columnOrderId], references: [id])
-  // columnOrderId Int
   columnPosition Int
   tasks Task[]
+
+  @@index([columnPosition])
 }
 
 model Task {
   id Int @id @default(autoincrement())
   taskPosition Int
   content String
-  column Column? @relation(fields: [columnId], references: [id])
+  column Column? @relation(fields: [columnId], references: [id], onDelete: Cascade) 
   columnId Int?
-  board Board @relation(fields: [boardId], references: [id])
+  board Board @relation(fields: [boardId], references: [id],  onDelete: Cascade)
   boardId Int @default(1)
+  
+  @@index([taskPosition])
 }
 

@@ -98,8 +98,7 @@ export const reorderColumn = async (req: Request, res: Response) => {
       newColumnPosition = Math.floor((prevColumnId + nextColumnId) / 2)
     }
 
-    
-     await prisma.column.update({
+    await prisma.column.update({
       where: {
         id: +columnId,
       },
@@ -107,7 +106,6 @@ export const reorderColumn = async (req: Request, res: Response) => {
         columnPosition: newColumnPosition,
       },
     })
-
 
     if (
       Math.abs(newColumnPosition - prevColumnId) <= 1 ||
@@ -170,7 +168,7 @@ export const createTask = async (req: Request, res: Response) => {
 
 export const createColumn = async (req: Request, res: Response) => {
   const { boardId } = req.params
-  const { title , prevIndex} = req.body
+  const { title, prevIndex } = req.body
   try {
     const response = await prisma.column.create({
       data: {
@@ -253,6 +251,32 @@ export const getBoard = async (req: Request, res: Response) => {
     }
 
     res.json({ ...formattedData })
+  } catch (err: any) {
+    console.error(err)
+  }
+}
+
+export const deleteTask = async (req: Request, res: Response) => {
+  const { taskId } = req.params
+  try {
+    await prisma.task.delete({
+      where: { id: +taskId },
+    })
+
+    res.json({ message: 'Deleted successfully' })
+  } catch (err: any) {
+    console.error(err)
+  }
+}
+
+export const deleteColumn = async (req: Request, res: Response) => {
+  const { columnId } = req.params
+  try {
+    await prisma.column.delete({
+      where: { id: +columnId },
+    })
+
+    res.json({ message: 'Deleted successfully' })
   } catch (err: any) {
     console.error(err)
   }
