@@ -3,7 +3,6 @@ import express from "express"
 
 const router = express.Router()
 
-// router.post('/board/:task?', )
 router.post('/create-task/:columnId', createTask)
 router.post('/create-column/:boardId', createColumn)
 router.post('/create-board', createBoard)

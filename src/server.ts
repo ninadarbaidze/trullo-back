@@ -2,7 +2,7 @@ import express from "express";
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { main } from "routes";
+import { board, auth } from "routes";
 
 
 
@@ -12,7 +12,8 @@ dotenv.config()
 
 server.use(bodyParser.json())
 server.use(cors())
-server.use(main)
+server.use(board)
+server.use(auth)
 
 
  server.listen(3001, () =>
