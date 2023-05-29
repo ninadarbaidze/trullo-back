@@ -172,7 +172,7 @@ export const createColumn = async (req: Request, res: Response) => {
   try {
     const response = await prisma.column.create({
       data: {
-        title: title,
+        title,
         columnPosition: prevIndex ? prevIndex + 1024 : 1024,
         board: {
           connect: { id: +boardId },
@@ -277,6 +277,39 @@ export const deleteColumn = async (req: Request, res: Response) => {
     })
 
     res.json({ message: 'Deleted successfully' })
+  } catch (err: any) {
+    console.error(err)
+  }
+}
+export const updateTask = async (req: Request, res: Response) => {
+  const { taskId } = req.params
+  const {content} = req.body
+  try {
+    await prisma.task.update({
+      where: { id: +taskId },
+      data: {
+        content
+      }
+    })
+
+    res.json({ message: 'Task updated successfully' })
+  } catch (err: any) {
+    console.error(err)
+  }
+}
+
+export const updateColumn = async (req: Request, res: Response) => {
+  const { columnId } = req.params
+  const {title} = req.body
+  try {
+    await prisma.column.update({
+      where: { id: +columnId },
+      data: {
+        title
+      }
+    })
+
+    res.json({ message: 'Column updated successfully' })
   } catch (err: any) {
     console.error(err)
   }

@@ -1,4 +1,4 @@
-import { createBoard, createTask, createColumn, reorderTask, getBoard, reorderColumn, deleteTask, deleteColumn } from "controllers"
+import { createBoard, createTask, createColumn, reorderTask, getBoard, reorderColumn, deleteTask, deleteColumn, updateColumn, updateTask } from "controllers"
 import express from "express"
 
 const router = express.Router()
@@ -12,5 +12,7 @@ router.patch('/reorder-column/:columnId', reorderColumn)
 router.get('/board/:boardId', getBoard)
 router.delete('/delete-task/:taskId', deleteTask)
 router.delete('/delete-column/:columnId', deleteColumn)
+router.patch('/update-column/:columnId', updateColumn)
+router.patch('/update-task/:taskId', updateTask)
 
 export default router

@@ -8,9 +8,20 @@ datasource db {
 }
 
 
+model User {
+  id Int @id @default(autoincrement())
+  username String
+  email String
+  password String
+  boards Board[]
+}
+
+
 model Board {
   id Int @id @default(autoincrement())
   name String
+  user User @relation(fields: [userId], references: [id])
+  userId Int @default(1)
   columns Column[]
   tasks Task[]
 }
