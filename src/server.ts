@@ -3,15 +3,16 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { board, auth } from "routes";
-
+const cookieParser = require('cookie-parser');
 
 
 const server = express()
 
 dotenv.config()
 
+server.use(cookieParser());
 server.use(bodyParser.json())
-server.use(cors())
+server.use(cors({ credentials: true, origin: true }));
 server.use(board)
 server.use(auth)
 

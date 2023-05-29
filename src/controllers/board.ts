@@ -201,6 +201,9 @@ export const createBoard = async (req: Request, res: Response) => {
 
 export const getBoard = async (req: Request, res: Response) => {
   const { boardId } = req.params
+  const refreshToken = req.cookies.refreshToken; 
+  console.log(refreshToken)
+
   try {
     const board = await prisma.board.findUnique({
       where: {
