@@ -2,7 +2,7 @@ import type { ErrorRequestHandler } from "express";
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
     const status = error.statusCode || 500
-    console.log(error)
+    console.error(error)
   
     const { message } = error
     const { data } = error

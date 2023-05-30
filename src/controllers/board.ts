@@ -30,7 +30,7 @@ export const reorderTask = async (req: Request, res: Response) => {
         },
       })
     } else {
-      console.log('me')
+
       await prisma.task.update({
         where: {
           id: +taskId,
@@ -124,7 +124,6 @@ export const reorderColumn = async (req: Request, res: Response) => {
         },
       })
 
-      console.log(orderedData)
 
       await Promise.all(
         orderedData.map(async (data, index) => {
@@ -201,8 +200,7 @@ export const createBoard = async (req: Request, res: Response) => {
 
 export const getBoard = async (req: Request, res: Response) => {
   const { boardId } = req.params
-  const refreshToken = req.cookies.refreshToken; 
-  console.log(refreshToken)
+
 
   try {
     const board = await prisma.board.findUnique({

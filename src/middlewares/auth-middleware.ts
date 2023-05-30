@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { Request, Response, NextFunction } from 'express';
-import {Error} from 'types'
+import {Error} from 'types/global'
 
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.get('Authorization')
@@ -15,11 +15,12 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     Date.now() >=
     JSON.parse(Buffer.from(tok.split('.')[1], 'base64').toString()).exp * 1000
 
-  if (isTokenExpired(token)) {
-    res.status(401).json({ message: 'Your Token is Expired' })
-  }
+  
   let decodedToken
   try {
+    if (isTokenExpired(token)) {
+      res.status(401).json({ message: 'Your Token is Expired' })
+    }
     decodedToken = jwt.verify(token,  process.env.ACCESS_TOKEN as string)
   } catch (err: any) {
     err.statusCode = 500
