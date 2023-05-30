@@ -19,7 +19,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   let decodedToken
   try {
     if (isTokenExpired(token)) {
-      res.status(401).json({ message: 'Your Token is Expired' })
+      res.status(401).json({ message: 'Your token is expired' })
     }
     decodedToken = jwt.verify(token,  process.env.ACCESS_TOKEN as string)
   } catch (err: any) {
