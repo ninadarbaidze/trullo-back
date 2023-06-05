@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client'
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 
 const prisma = new PrismaClient()
 
-export const reorderTask = async (req: Request, res: Response) => {
+export const reorderTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
   const { columnId, isChangingColumn, prevTaskId, nextTaskId } = req.body
 
@@ -77,11 +77,14 @@ export const reorderTask = async (req: Request, res: Response) => {
 
     res.json({ message: 'success' })
   } catch (err: any) {
-    console.error(err)
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const reorderColumn = async (req: Request, res: Response) => {
+export const reorderColumn = async (req: Request, res: Response, next: NextFunction) => {
   const { columnId } = req.params
   const { boardId, prevColumnId, nextColumnId } = req.body
 
@@ -141,13 +144,16 @@ export const reorderColumn = async (req: Request, res: Response) => {
 
     res.json({ message: 'success' })
   } catch (err: any) {
-    console.error(err)
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const createTask = async (req: Request, res: Response) => {
+export const createTask = async (req: Request, res: Response, next: NextFunction) => {
   const { columnId } = req.params
-  const { content, prevIndex } = req.body
+  const { content, prevIndex, boardId } = req.body
   try {
     const response = await prisma.task.create({
       data: {
@@ -156,16 +162,24 @@ export const createTask = async (req: Request, res: Response) => {
         column: {
           connect: { id: +columnId },
         },
+        board: {
+          connect: {
+            id: boardId
+          }
+        }
       },
     })
 
-    res.json({ ...response, id: `task-${response.id}` })
-  } catch (err) {
-    console.error(err)
+    res.status(201).json({ ...response, id: `task-${response.id}` })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const createColumn = async (req: Request, res: Response) => {
+export const createColumn = async (req: Request, res: Response, next: NextFunction) => {
   const { boardId } = req.params
   const { title, prevIndex } = req.body
   try {
@@ -179,26 +193,38 @@ export const createColumn = async (req: Request, res: Response) => {
       },
     })
     res.json({ ...response, id: `column-${response.id}` })
-  } catch (err) {
-    console.error(err)
+  } catch (err:any) {
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const createBoard = async (req: Request, res: Response) => {
-  const { name } = req.body
+export const createBoard = async (req: Request, res: Response, next: NextFunction) => {
+  const { name, userId} = req.body
   try {
-    await prisma.board.create({
+   const response = await prisma.board.create({
       data: {
         name,
+        user: {
+          connect: {
+            id: userId
+          }
+        }
       },
+      
     })
-    res.json({ message: 'success' })
-  } catch (err) {
-    console.error(err)
+    res.status(201).json({ message: 'success', boardId: response.id })
+  } catch (err: any) {
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const getBoard = async (req: Request, res: Response) => {
+export const getBoard = async (req: Request, res: Response, next: NextFunction) => {
   const { boardId } = req.params
 
 
@@ -219,8 +245,12 @@ export const getBoard = async (req: Request, res: Response) => {
           },
         },
         tasks: true,
+        
       },
     })
+
+
+    if(!board) return res.status(404).json({message: 'board not found'})
 
     const tasksObject = board?.tasks?.reduce((accumulator, value) => {
       return {
@@ -249,15 +279,42 @@ export const getBoard = async (req: Request, res: Response) => {
       columnOrder: board?.columns
         .sort((a, b) => (a.columnPosition > b.columnPosition ? 1 : -1))
         .map((column) => `column-${column.id}`),
+      name: board?.name
     }
 
     res.json({ ...formattedData })
   } catch (err: any) {
-    console.error(err)
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const deleteTask = async (req: Request, res: Response) => {
+export const getAllBoards = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req.params
+
+
+  try {
+    const boards = await prisma.board.findMany({
+      where: {
+        userId: +userId,
+      },
+      
+    })
+
+
+
+    res.json(boards)
+  } catch (err: any) {
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const deleteTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
   try {
     await prisma.task.delete({
@@ -266,11 +323,14 @@ export const deleteTask = async (req: Request, res: Response) => {
 
     res.json({ message: 'Deleted successfully' })
   } catch (err: any) {
-    console.error(err)
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const deleteColumn = async (req: Request, res: Response) => {
+export const deleteColumn = async (req: Request, res: Response, next: NextFunction) => {
   const { columnId } = req.params
   try {
     await prisma.column.delete({
@@ -279,10 +339,13 @@ export const deleteColumn = async (req: Request, res: Response) => {
 
     res.json({ message: 'Deleted successfully' })
   } catch (err: any) {
-    console.error(err)
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
-export const updateTask = async (req: Request, res: Response) => {
+export const updateTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
   const {content} = req.body
   try {
@@ -295,11 +358,14 @@ export const updateTask = async (req: Request, res: Response) => {
 
     res.json({ message: 'Task updated successfully' })
   } catch (err: any) {
-    console.error(err)
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }
 
-export const updateColumn = async (req: Request, res: Response) => {
+export const updateColumn = async (req: Request, res: Response, next: NextFunction) => {
   const { columnId } = req.params
   const {title} = req.body
   try {
@@ -312,6 +378,9 @@ export const updateColumn = async (req: Request, res: Response) => {
 
     res.json({ message: 'Column updated successfully' })
   } catch (err: any) {
-    console.error(err)
+     if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }

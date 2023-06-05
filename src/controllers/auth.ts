@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client'
-import { Request, Response, json } from 'express'
+import { NextFunction, Request, Response, json } from 'express'
 import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { sendConfirmationEmail } from 'mail'
+import { isTokenExpired } from 'utils'
 
 const prisma = new PrismaClient()
 
@@ -12,7 +13,7 @@ export const registerUser = async (req: Request, res: Response) => {
   try {
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ email }, { username }],
+        OR: [{ username }, { email }],
       },
     })
 
@@ -75,27 +76,25 @@ export const loginUser = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Please provide correct credentials' })
     }
 
-    //TODO: activate refresh token if user wants to remember
-
     const accessToken = jwt.sign({ userId: user!.id }, process.env.ACCESS_TOKEN!, {
-      expiresIn: '10s',
+      expiresIn: '15m',
     })
 
     if (remember) {
       const refreshToken = jwt.sign({ userId: user!.id }, process.env.REFRESH_TOKEN!, {
-        expiresIn: '14d',
+        expiresIn: '30d',
       })
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== 'development',
-        maxAge: 1209600000,
+        maxAge: 2592000000,
       })
     }
 
     res.status(201).json({
       message: 'success',
       accessToken,
-      userId: user.id,
+      user: { id: user.id, name: user.username, avatar: user.avatar },
     })
   } catch (err: any) {
     console.error(err)
@@ -128,7 +127,7 @@ export const generateNewAccessToken = async (req: Request, res: Response) => {
     if (!user) return res.status(404).json({ message: 'user does not exists' })
 
     const accessToken = jwt.sign({ userId: user!.id }, process.env.ACCESS_TOKEN!, {
-      expiresIn: '10s',
+      expiresIn: '15m',
     })
     res.json({ token: accessToken })
   } catch (err: any) {
@@ -140,9 +139,6 @@ export const verifyAccount = async (req: Request, res: Response) => {
   try {
     const { token } = req.params
     const { id } = jwt.verify(token, process.env.SIGNUP_TOKEN as string) as JwtPayload
-
-    const isTokenExpired = (tok: string) =>
-      Date.now() >= JSON.parse(Buffer.from(tok.split('.')[1], 'base64').toString()).exp * 1000
 
     if (isTokenExpired(token)) {
       res.status(401).json({ message: 'Your ask for another token' })
@@ -174,5 +170,163 @@ export const verifyAccount = async (req: Request, res: Response) => {
     if (!err.statusCode) {
       err.statusCode = 500
     }
+  }
+}
+
+export const uploadAvatar = async (req: Request) => {}
+
+export const updatePassword = async (req: Request, res: Response, next: NextFunction) => {
+  const { password } = req.body
+  const { token } = req.params
+
+  try {
+    const { userId } = jwt.verify(token, process.env.ACCESS_TOKEN!) as JwtPayload
+    console.log('us', userId)
+
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    })
+
+    if (!password || !existingUser) {
+      return res.status(404).json({
+        message: 'Something went wrong, please check your registration method',
+      })
+    }
+
+    if (isTokenExpired(token)) {
+      res.status(401).json({ message: 'Your Token is expired' })
+    }
+
+    const hashedPass = await bcrypt.hash(password, 12)
+
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        password: hashedPass,
+      },
+    })
+
+    res.status(200).json({
+      message: 'Password is updated',
+    })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  console.log('here')
+
+  const { new_password, email, username, avatar } = req.body
+  console.log(new_password)
+  const image = req.file!
+  const { userId } = req.params
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        id: +userId,
+      },
+    })
+
+    if (!existingUser) {
+      return res.status(404).json({
+        message: 'User does not exists',
+      })
+    }
+
+    const userWithSameEmailOrUsername = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+    })
+
+    if (existingUser.id !== userWithSameEmailOrUsername!.id) {
+      return res.status(409).json({
+        message: 'someone with this credentials already exists!',
+      })
+    }
+
+    const password = new_password ? await bcrypt.hash(new_password, 12) : existingUser.password
+    console.log(password)
+
+    let updatedData = {}
+
+    if (username === existingUser.username && email === existingUser.email) {
+      updatedData = {
+        avatar: image?.path ?? avatar,
+        password: password,
+      }
+    } else if (username === existingUser.username && email !== existingUser.email && email) {
+      updatedData = {
+        avatar: image?.path ?? avatar,
+        password: password,
+        email,
+      }
+    } else if (username && username !== existingUser.username && email === existingUser.email) {
+      updatedData = {
+        avatar: image?.path ?? avatar,
+        password: password,
+        username,
+      }
+    } else if (
+      username &&
+      username !== existingUser.username &&
+      email !== existingUser.email &&
+      email
+    ) {
+      updatedData = {
+        avatar: image?.path ?? avatar,
+        password: password,
+        username,
+        email,
+      }
+    }
+
+    await prisma.user.update({
+      where: {
+        id: +userId,
+      },
+      data: updatedData,
+    })
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+    })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const getProfileInfo = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req.params
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: +userId,
+      },
+    })
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User does not exists',
+      })
+    }
+
+    res.json(user)
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
   }
 }

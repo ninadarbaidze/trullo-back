@@ -3,6 +3,7 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { board, auth } from "routes";
+import { errorHandler } from "middlewares";
 const cookieParser = require('cookie-parser');
 
 
@@ -12,9 +13,14 @@ dotenv.config()
 
 server.use(cookieParser());
 server.use(bodyParser.json())
+server.use('/images', express.static('images'));
+
 server.use(cors({ credentials: true, origin: true }));
 server.use(board)
 server.use(auth)
+
+server.use(errorHandler)
+
 
 
  server.listen(3001, () =>
