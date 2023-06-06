@@ -164,7 +164,7 @@ export const createTask = async (req: Request, res: Response, next: NextFunction
         },
         board: {
           connect: {
-            id: boardId
+            id: +boardId
           }
         }
       },
@@ -203,13 +203,16 @@ export const createColumn = async (req: Request, res: Response, next: NextFuncti
 
 export const createBoard = async (req: Request, res: Response, next: NextFunction) => {
   const { name, userId} = req.body
+  console.log('nasdsdasdadas', name)
+  const image = req.file
   try {
    const response = await prisma.board.create({
       data: {
-        name,
+       name: name,
+        image: image?.path,
         user: {
           connect: {
-            id: userId
+            id: +userId
           }
         }
       },

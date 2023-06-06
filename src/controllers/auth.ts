@@ -51,7 +51,6 @@ export const registerUser = async (req: Request, res: Response) => {
 
 export const loginUser = async (req: Request, res: Response) => {
   const { username, password, remember } = req.body
-  console.log(remember)
 
   try {
     const user = await prisma.user.findUnique({
@@ -99,6 +98,10 @@ export const loginUser = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error(err)
   }
+}
+
+export const logoutUser = (req: Request, res: Response, next: NextFunction) => {
+
 }
 
 export const generateNewAccessToken = async (req: Request, res: Response) => {
@@ -289,7 +292,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    await prisma.user.update({
+   const response =  await prisma.user.update({
       where: {
         id: +userId,
       },
@@ -298,6 +301,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 
     res.status(200).json({
       message: 'Profile updated successfully',
+      userInfo: response
     })
   } catch (err: any) {
     if (!err.statusCode) {

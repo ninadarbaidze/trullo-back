@@ -7,6 +7,7 @@ import {
   updatePassword,
   updateProfile,
   getProfileInfo,
+  logoutUser
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
