@@ -42,7 +42,6 @@ export const registerUser = async (req: Request, res: Response) => {
     )
     await sendConfirmationEmail(username, email as string, registerToken)
 
-
     res.status(201).json({
       message: 'user created successfully',
     })
@@ -92,7 +91,7 @@ export const loginUser = async (req: Request, res: Response) => {
       })
     }
 
-    const { password: _pass, ...modifiedUserData} = user
+    const { password: _pass, ...modifiedUserData } = user
 
     res.status(201).json({
       message: 'success',
@@ -227,8 +226,6 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 }
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
-  
-
   const { new_password, email, username, avatar, firstName, lastName } = req.body
   console.log(new_password)
   const image = req.file!
@@ -267,24 +264,24 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
-        firstName: firstName ?? existingUser.firstName , 
-        lastName: lastName ?? existingUser.lastName, 
+        firstName: firstName ?? existingUser.firstName,
+        lastName: lastName ?? existingUser.lastName,
       }
     } else if (username === existingUser.username && email !== existingUser.email && email) {
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
         email,
-        firstName: firstName ?? existingUser.firstName , 
-        lastName: lastName ?? existingUser.lastName, 
+        firstName: firstName ?? existingUser.firstName,
+        lastName: lastName ?? existingUser.lastName,
       }
     } else if (username && username !== existingUser.username && email === existingUser.email) {
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
         username,
-        firstName: firstName ?? existingUser.firstName , 
-        lastName: lastName ?? existingUser.lastName, 
+        firstName: firstName ?? existingUser.firstName,
+        lastName: lastName ?? existingUser.lastName,
       }
     } else if (
       username &&
@@ -297,8 +294,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         password: password,
         username,
         email,
-        firstName: firstName ?? existingUser.firstName , 
-        lastName: lastName ?? existingUser.lastName, 
+        firstName: firstName ?? existingUser.firstName,
+        lastName: lastName ?? existingUser.lastName,
       }
     }
 
@@ -345,22 +342,27 @@ export const getProfileInfo = async (req: Request, res: Response, next: NextFunc
   }
 }
 
-
-export const getAllUsers = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  const { boardId } = req.params
   try {
-
     const users = await prisma.user.findMany({
       where: {
+        boards: {
+          none: {
+            board: {
+              id: +boardId,
+            },
+          },
+        },
         isVerified: true
-      }
+      },
+      
     })
     res.json(users)
-
-  }catch(err: any) {
+  } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
-  
   }
 }

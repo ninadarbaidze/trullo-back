@@ -43,6 +43,6 @@ router.delete('/delete-column/:columnId', isAuth, deleteColumn)
 router.patch('/update-column/:columnId', isAuth, updateColumn)
 router.patch('/update-task/:taskId', isAuth, updateTask)
 router.post('/send-board-invitations/', isAuth, sendInvitationToBoard)
-router.post('/verify-board',  verifyInvitation)
+router.post('/verify-board', isAuth, verifyInvitation)
 
 export default router

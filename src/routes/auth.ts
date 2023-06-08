@@ -35,6 +35,6 @@ router.post('/verify-account/:token', verifyAccount)
 router.patch('/update-password/:userId', updatePassword)
 router.put('/update-profile/:userId', isAuth, upload.single('image'), updateProfile)
 router.get('/profile/:userId', isAuth, getProfileInfo)
-router.get('/all-users', isAuth, getAllUsers)
+router.get('/all-users/:boardId', isAuth, getAllUsers)
 
 export default router

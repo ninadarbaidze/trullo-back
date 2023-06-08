@@ -428,7 +428,7 @@ export const sendInvitationToBoard = async (req: Request, res: Response, next: N
     const userIds = users.map((user: { id: number }) => user.id)
 
     const boardInvitationToken = jwt.sign(
-      { userIds, boardId },
+      { userIds, boardId, boardName },
       process.env.INVITATION_TOKEN as string,
       { expiresIn: '4h' }
     )
@@ -455,22 +455,25 @@ export const verifyInvitation = async (req: Request, res: Response, next: NextFu
   const { token, userId } = req.body
 
   try {
-    let decodedToken: { userIds: number[]; boardId: number } | undefined
+    let decodedToken: { userIds: number[]; boardId: number , boardName: string} | undefined
     jwt.verify(token, process.env.INVITATION_TOKEN as string, function (err: any, decoded: any) {
       decodedToken = decoded
       if (err) return res.status(403).json({ message: 'your token is expired' })
     })
     const isUserFromMemberOfBoard = decodedToken?.userIds.some((user) => user === userId)
+    console.log( decodedToken)
+
 
     if (!isUserFromMemberOfBoard)
       return res.status(403).json({ message: 'You can not access this board' })
-    console.log()
+    
+    
 
     await prisma.usersOnBoards.createMany({
       data: [{userId: userId, boardId: +decodedToken?.boardId!}]
     })
 
-    res.json({ message: 'success' })
+    res.json({ message: 'success', boardId: decodedToken?.boardId, boardName: decodedToken?.boardName })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
