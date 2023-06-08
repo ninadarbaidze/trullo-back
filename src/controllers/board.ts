@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
+import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
+import { sendInvitationEmail } from 'mail'
 
 const prisma = new PrismaClient()
 
@@ -30,7 +32,6 @@ export const reorderTask = async (req: Request, res: Response, next: NextFunctio
         },
       })
     } else {
-
       await prisma.task.update({
         where: {
           id: +taskId,
@@ -127,7 +128,6 @@ export const reorderColumn = async (req: Request, res: Response, next: NextFunct
         },
       })
 
-
       await Promise.all(
         orderedData.map(async (data, index) => {
           await prisma.column.updateMany({
@@ -164,9 +164,9 @@ export const createTask = async (req: Request, res: Response, next: NextFunction
         },
         board: {
           connect: {
-            id: +boardId
-          }
-        }
+            id: +boardId,
+          },
+        },
       },
     })
 
@@ -193,8 +193,8 @@ export const createColumn = async (req: Request, res: Response, next: NextFuncti
       },
     })
     res.json({ ...response, id: `column-${response.id}` })
-  } catch (err:any) {
-     if (!err.statusCode) {
+  } catch (err: any) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -202,25 +202,28 @@ export const createColumn = async (req: Request, res: Response, next: NextFuncti
 }
 
 export const createBoard = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, userId} = req.body
-  console.log('nasdsdasdadas', name)
+  const { name, userId } = req.body
   const image = req.file
   try {
-   const response = await prisma.board.create({
+    const response = await prisma.board.create({
       data: {
-       name: name,
+        name: name,
         image: image?.path,
-        user: {
-          connect: {
-            id: +userId
-          }
-        }
+        boardOwnerId: +userId,
+        users: {
+          create: {
+            user: {
+              connect: {
+                id: +userId,
+              },
+            },
+          },
+        },
       },
-      
     })
     res.status(201).json({ message: 'success', boardId: response.id })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -228,41 +231,55 @@ export const createBoard = async (req: Request, res: Response, next: NextFunctio
 }
 
 export const getBoard = async (req: Request, res: Response, next: NextFunction) => {
-  const { boardId } = req.params
-
+  const { boardId, userId } = req.params
 
   try {
-    const board = await prisma.board.findUnique({
+    const board = await prisma.usersOnBoards.findFirst({
       where: {
-        id: +boardId,
+        AND: [
+          { boardId: +boardId },
+          {
+            user: {
+              id: +userId,
+            },
+          },
+        ],
       },
       include: {
-        columns: {
+        board: {
           include: {
-            tasks: {
-              select: {
-                id: true,
-                taskPosition: true,
+            columns: {
+              include: {
+                tasks: {
+                  select: {
+                    id: true,
+                    taskPosition: true,
+                  },
+                },
+              },
+            },
+
+            tasks: true,
+            users: {
+              include: {
+                user: true,
               },
             },
           },
         },
-        tasks: true,
-        
       },
     })
 
+    if (!board) return res.status(404).json({ message: 'board not found' })
 
-    if(!board) return res.status(404).json({message: 'board not found'})
-
-    const tasksObject = board?.tasks?.reduce((accumulator, value) => {
+    const tasksObject = board?.board?.tasks?.reduce((accumulator, value) => {
       return {
         ...accumulator,
         [`task-${value.id}`]: { ...value, id: `task-${value.id}` },
       }
     }, {})
 
-    const columnsObject = board?.columns?.reduce((accumulator, value) => {
+    const columnsObject = board?.board?.columns?.reduce((accumulator, value) => {
       return {
         ...accumulator,
         [`column-${value.id}`]: {
@@ -276,18 +293,30 @@ export const getBoard = async (req: Request, res: Response, next: NextFunction) 
       }
     }, {})
 
+    const users = board?.board?.users
+      .filter((user) => user.user.isVerified)
+      .map((user) => ({
+        id: user.user.id,
+        username: user.user.username,
+        email: user.user.email,
+        firstName: user.user.firstName,
+        lastName: user.user.lastName,
+        avatar: user.user.avatar,
+      }))
+
     const formattedData = {
       tasks: tasksObject,
       columns: columnsObject,
-      columnOrder: board?.columns
+      columnOrder: board?.board.columns
         .sort((a, b) => (a.columnPosition > b.columnPosition ? 1 : -1))
         .map((column) => `column-${column.id}`),
-      name: board?.name
+      name: board?.board?.name,
+      users,
     }
 
     res.json({ ...formattedData })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -297,20 +326,25 @@ export const getBoard = async (req: Request, res: Response, next: NextFunction) 
 export const getAllBoards = async (req: Request, res: Response, next: NextFunction) => {
   const { userId } = req.params
 
-
   try {
-    const boards = await prisma.board.findMany({
+    const boards = await prisma.usersOnBoards.findMany({
       where: {
-        userId: +userId,
+        user: {
+          id: +userId,
+        },
       },
-      
+      include: {
+        board: true,
+      },
+      orderBy: {
+        boardId: 'desc'
+      }
     })
 
-
-
-    res.json(boards)
+    const formattedBoard = boards.map((board) => board.board)
+    res.json(formattedBoard)
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -326,7 +360,7 @@ export const deleteTask = async (req: Request, res: Response, next: NextFunction
 
     res.json({ message: 'Deleted successfully' })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -342,7 +376,7 @@ export const deleteColumn = async (req: Request, res: Response, next: NextFuncti
 
     res.json({ message: 'Deleted successfully' })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -350,18 +384,18 @@ export const deleteColumn = async (req: Request, res: Response, next: NextFuncti
 }
 export const updateTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
-  const {content} = req.body
+  const { content } = req.body
   try {
     await prisma.task.update({
       where: { id: +taskId },
       data: {
-        content
-      }
+        content,
+      },
     })
 
     res.json({ message: 'Task updated successfully' })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)
@@ -370,18 +404,75 @@ export const updateTask = async (req: Request, res: Response, next: NextFunction
 
 export const updateColumn = async (req: Request, res: Response, next: NextFunction) => {
   const { columnId } = req.params
-  const {title} = req.body
+  const { title } = req.body
   try {
     await prisma.column.update({
       where: { id: +columnId },
       data: {
-        title
-      }
+        title,
+      },
     })
 
     res.json({ message: 'Column updated successfully' })
   } catch (err: any) {
-     if (!err.statusCode) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const sendInvitationToBoard = async (req: Request, res: Response, next: NextFunction) => {
+  const { users, boardName, boardId } = req.body
+  try {
+    const userIds = users.map((user: { id: number }) => user.id)
+
+    const boardInvitationToken = jwt.sign(
+      { userIds, boardId },
+      process.env.INVITATION_TOKEN as string,
+      { expiresIn: '4h' }
+    )
+
+    users.map(async (user: { username: string; email: string }) => {
+      await sendInvitationEmail(
+        user.username,
+        user.email as string,
+        boardInvitationToken,
+        boardName
+      )
+    })
+
+    res.json({ message: 'Invitations sent successfully', boardInvitationToken })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const verifyInvitation = async (req: Request, res: Response, next: NextFunction) => {
+  const { token, userId } = req.body
+
+  try {
+    let decodedToken: { userIds: number[]; boardId: number } | undefined
+    jwt.verify(token, process.env.INVITATION_TOKEN as string, function (err: any, decoded: any) {
+      decodedToken = decoded
+      if (err) return res.status(403).json({ message: 'your token is expired' })
+    })
+    const isUserFromMemberOfBoard = decodedToken?.userIds.some((user) => user === userId)
+
+    if (!isUserFromMemberOfBoard)
+      return res.status(403).json({ message: 'You can not access this board' })
+    console.log()
+
+    await prisma.usersOnBoards.createMany({
+      data: [{userId: userId, boardId: +decodedToken?.boardId!}]
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
       err.statusCode = 500
     }
     next(err)

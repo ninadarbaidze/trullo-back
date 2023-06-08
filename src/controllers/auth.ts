@@ -8,7 +8,7 @@ import { isTokenExpired } from 'utils'
 const prisma = new PrismaClient()
 
 export const registerUser = async (req: Request, res: Response) => {
-  const { username, email, password } = req.body
+  const { username, email, password, firstName, lastName } = req.body
 
   try {
     const existingUser = await prisma.user.findFirst({
@@ -30,6 +30,8 @@ export const registerUser = async (req: Request, res: Response) => {
         username,
         email,
         password: hashedPass,
+        firstName,
+        lastName,
       },
     })
 
@@ -38,12 +40,12 @@ export const registerUser = async (req: Request, res: Response) => {
       process.env.SIGNUP_TOKEN as string,
       { expiresIn: '15m' }
     )
+    await sendConfirmationEmail(username, email as string, registerToken)
+
 
     res.status(201).json({
       message: 'user created successfully',
-      token: registerToken,
     })
-    await sendConfirmationEmail(username, email as string, registerToken)
   } catch (err: any) {
     console.error(err)
   }
@@ -90,19 +92,19 @@ export const loginUser = async (req: Request, res: Response) => {
       })
     }
 
+    const { password: _pass, ...modifiedUserData} = user
+
     res.status(201).json({
       message: 'success',
       accessToken,
-      user: { id: user.id, name: user.username, avatar: user.avatar },
+      user: modifiedUserData,
     })
   } catch (err: any) {
     console.error(err)
   }
 }
 
-export const logoutUser = (req: Request, res: Response, next: NextFunction) => {
-
-}
+export const logoutUser = (req: Request, res: Response, next: NextFunction) => {}
 
 export const generateNewAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken
@@ -225,9 +227,9 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 }
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
-  console.log('here')
+  
 
-  const { new_password, email, username, avatar } = req.body
+  const { new_password, email, username, avatar, firstName, lastName } = req.body
   console.log(new_password)
   const image = req.file!
   const { userId } = req.params
@@ -265,18 +267,24 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
+        firstName: firstName ?? existingUser.firstName , 
+        lastName: lastName ?? existingUser.lastName, 
       }
     } else if (username === existingUser.username && email !== existingUser.email && email) {
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
         email,
+        firstName: firstName ?? existingUser.firstName , 
+        lastName: lastName ?? existingUser.lastName, 
       }
     } else if (username && username !== existingUser.username && email === existingUser.email) {
       updatedData = {
         avatar: image?.path ?? avatar,
         password: password,
         username,
+        firstName: firstName ?? existingUser.firstName , 
+        lastName: lastName ?? existingUser.lastName, 
       }
     } else if (
       username &&
@@ -289,10 +297,12 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         password: password,
         username,
         email,
+        firstName: firstName ?? existingUser.firstName , 
+        lastName: lastName ?? existingUser.lastName, 
       }
     }
 
-   const response =  await prisma.user.update({
+    const response = await prisma.user.update({
       where: {
         id: +userId,
       },
@@ -301,7 +311,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 
     res.status(200).json({
       message: 'Profile updated successfully',
-      userInfo: response
+      userInfo: response,
     })
   } catch (err: any) {
     if (!err.statusCode) {
@@ -332,5 +342,25 @@ export const getProfileInfo = async (req: Request, res: Response, next: NextFunc
       err.statusCode = 500
     }
     next(err)
+  }
+}
+
+
+export const getAllUsers = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+
+    const users = await prisma.user.findMany({
+      where: {
+        isVerified: true
+      }
+    })
+    res.json(users)
+
+  }catch(err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  
   }
 }

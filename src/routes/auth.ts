@@ -7,7 +7,8 @@ import {
   updatePassword,
   updateProfile,
   getProfileInfo,
-  logoutUser
+  logoutUser,
+  getAllUsers
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -34,5 +35,6 @@ router.post('/verify-account/:token', verifyAccount)
 router.patch('/update-password/:userId', updatePassword)
 router.put('/update-profile/:userId', isAuth, upload.single('image'), updateProfile)
 router.get('/profile/:userId', isAuth, getProfileInfo)
+router.get('/all-users', isAuth, getAllUsers)
 
 export default router

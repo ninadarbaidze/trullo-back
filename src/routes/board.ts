@@ -10,6 +10,8 @@ import {
   updateColumn,
   updateTask,
   getAllBoards,
+  sendInvitationToBoard,
+  verifyInvitation
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -34,11 +36,13 @@ router.post('/create-column/:boardId', isAuth, createColumn)
 router.post('/create-board', isAuth, upload.single('image'), createBoard)
 router.patch('/reorder-task/:taskId', isAuth, reorderTask)
 router.patch('/reorder-column/:columnId', isAuth, reorderColumn)
-router.get('/board/:boardId', isAuth, getBoard)
-router.get('/boards/:userId', isAuth, getAllBoards)
+router.get('/board/:boardId/:userId', isAuth, getBoard)
+router.get('/boards/:userId',  getAllBoards)
 router.delete('/delete-task/:taskId', isAuth, deleteTask)
 router.delete('/delete-column/:columnId', isAuth, deleteColumn)
 router.patch('/update-column/:columnId', isAuth, updateColumn)
 router.patch('/update-task/:taskId', isAuth, updateTask)
+router.post('/send-board-invitations/', isAuth, sendInvitationToBoard)
+router.post('/verify-board',  verifyInvitation)
 
 export default router
