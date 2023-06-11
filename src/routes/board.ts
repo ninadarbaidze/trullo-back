@@ -11,7 +11,9 @@ import {
   updateTask,
   getAllBoards,
   sendInvitationToBoard,
-  verifyInvitation
+  verifyInvitation,
+  getBoardData,
+  removeUserFromBoard
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -44,5 +46,7 @@ router.patch('/update-column/:columnId', isAuth, updateColumn)
 router.patch('/update-task/:taskId', isAuth, updateTask)
 router.post('/send-board-invitations/', isAuth, sendInvitationToBoard)
 router.post('/verify-board', isAuth, verifyInvitation)
+router.get('/board-detail/:boardId', isAuth, getBoardData)
+router.patch('/remove-board-user', isAuth, removeUserFromBoard)
 
 export default router

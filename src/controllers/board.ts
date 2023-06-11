@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
 import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
 import { sendInvitationEmail } from 'mail'
+import { exclude } from 'utils'
 
 const prisma = new PrismaClient()
 
@@ -295,14 +296,7 @@ export const getBoard = async (req: Request, res: Response, next: NextFunction) 
 
     const users = board?.board?.users
       .filter((user) => user.user.isVerified)
-      .map((user) => ({
-        id: user.user.id,
-        username: user.user.username,
-        email: user.user.email,
-        firstName: user.user.firstName,
-        lastName: user.user.lastName,
-        avatar: user.user.avatar,
-      }))
+      .map((user) => exclude(user.user, ['password']))
 
     const formattedData = {
       tasks: tasksObject,
@@ -334,14 +328,25 @@ export const getAllBoards = async (req: Request, res: Response, next: NextFuncti
         },
       },
       include: {
-        board: true,
+        board: {
+          include: {
+            users: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
-        boardId: 'desc'
-      }
+        boardId: 'desc',
+      },
     })
 
-    const formattedBoard = boards.map((board) => board.board)
+    const formattedBoard = boards.map((board) => ({
+      ...board.board,
+      users: board.board.users.map((user) => (exclude(user.user, ['password']), user.user)),
+    }))
     res.json(formattedBoard)
   } catch (err: any) {
     if (!err.statusCode) {
@@ -455,26 +460,80 @@ export const verifyInvitation = async (req: Request, res: Response, next: NextFu
   const { token, userId } = req.body
 
   try {
-    let decodedToken: { userIds: number[]; boardId: number , boardName: string} | undefined
+    let decodedToken: { userIds: number[]; boardId: number; boardName: string } | undefined
     jwt.verify(token, process.env.INVITATION_TOKEN as string, function (err: any, decoded: any) {
       decodedToken = decoded
       if (err) return res.status(403).json({ message: 'your token is expired' })
     })
     const isUserFromMemberOfBoard = decodedToken?.userIds.some((user) => user === userId)
-    console.log( decodedToken)
-
 
     if (!isUserFromMemberOfBoard)
       return res.status(403).json({ message: 'You can not access this board' })
-    
-    
 
     await prisma.usersOnBoards.createMany({
-      data: [{userId: userId, boardId: +decodedToken?.boardId!}]
+      data: [{ userId: userId, boardId: +decodedToken?.boardId! }],
     })
 
-    res.json({ message: 'success', boardId: decodedToken?.boardId, boardName: decodedToken?.boardName })
+    res.json({
+      message: 'success',
+      boardId: decodedToken?.boardId,
+      boardName: decodedToken?.boardName,
+    })
   } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const getBoardData = async (req: Request, res: Response, next: NextFunction) => {
+  const { boardId } = req.params
+  try {
+    const boardWithUsers = await prisma.board.findUnique({
+      where: { id: +boardId },
+      include: {
+        users: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    })
+    const boardOwner = boardWithUsers?.users.find(
+      (user) => user.userId === boardWithUsers.boardOwnerId
+    )?.user
+    const modifiedData = {
+      ...boardWithUsers,
+      boardOwner: boardOwner,
+      users: boardWithUsers?.users.map((user) => (exclude(user.user, ['password']), user.user)),
+    }
+
+    res.json(modifiedData)
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+
+export const removeUserFromBoard = async(req: Request, res: Response, next: NextFunction) => {
+  const {userId, boardId} = req.body
+  try {
+    await prisma.usersOnBoards.delete({
+      where: {
+        userId_boardId: {
+          userId,
+          boardId
+        }
+      }
+    })
+
+    res.json({message: 'success'})
+
+  }catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
     }

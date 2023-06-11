@@ -14,7 +14,7 @@ model User {
   email String @unique
   firstName String
   lastName String 
-  password String 
+  password String
   boards UsersOnBoards[]
   isVerified Boolean @default(false)
   avatar String?
@@ -38,7 +38,17 @@ model Board {
   columns Column[]
   tasks Task[]
   boardOwnerId Int 
+  createdAt DateTime @default(now())
+  description BoardDescription?
 }
+
+model BoardDescription {
+  id Int @id @default(autoincrement())
+  content String @db.Text
+  board  Board @relation(fields:[boardId], references:[id])
+  boardId Int @unique
+}
+
 
 model Column {
   id Int @id @default(autoincrement())
