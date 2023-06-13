@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
 import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
 import { sendInvitationEmail } from 'mail'
+import { board } from 'routes'
 import { exclude } from 'utils'
 
 const prisma = new PrismaClient()
@@ -498,6 +499,7 @@ export const getBoardData = async (req: Request, res: Response, next: NextFuncti
             user: true,
           },
         },
+        description: true
       },
     })
     const boardOwner = boardWithUsers?.users.find(
@@ -507,6 +509,8 @@ export const getBoardData = async (req: Request, res: Response, next: NextFuncti
       ...boardWithUsers,
       boardOwner: boardOwner,
       users: boardWithUsers?.users.map((user) => (exclude(user.user, ['password']), user.user)),
+      description: boardWithUsers?.description?.content
+     
     }
 
     res.json(modifiedData)
@@ -532,6 +536,54 @@ export const removeUserFromBoard = async(req: Request, res: Response, next: Next
     })
 
     res.json({message: 'success'})
+
+  }catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+export const postBoardDescription = async(req: Request, res: Response, next: NextFunction) => {
+  const {description, name} = req.body
+  const {boardId} = req.params
+  const image = req.file
+  try {
+    const existingBoard = await prisma.board.findUnique({
+      where: {
+        id: +boardId
+      },
+      include: {
+        description: true
+      }
+    })
+
+    if(!existingBoard) {
+     return  res.status(404).json({message: 'Incorrect board id'})
+    }
+
+    const response = await prisma.board.update({
+      where: {
+        id: +boardId
+      },
+      data: {
+        name: name ?? existingBoard?.name,
+        image: !image? null :  image?.path,
+        description: {
+          upsert: {
+            create: {
+              content: description ?? '',
+            },
+            update: {
+              content: description ?? existingBoard.description?.content
+            }
+          }
+        }
+      }
+    })
+
+
+    res.json({message: 'success', boardDetails: response })
 
   }catch (err: any) {
     if (!err.statusCode) {
