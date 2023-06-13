@@ -544,10 +544,33 @@ export const removeUserFromBoard = async(req: Request, res: Response, next: Next
     next(err)
   }
 }
+
+export const removeBoardImage = async(req: Request, res: Response, next: NextFunction) => {
+  const {boardId} = req.params
+  try {
+    await prisma.board.update({
+      where: {
+        id: +boardId
+      },
+      data: {
+        image: null
+      }
+    })
+
+    res.json({message: 'success'})
+
+  }catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
 export const postBoardDescription = async(req: Request, res: Response, next: NextFunction) => {
   const {description, name} = req.body
   const {boardId} = req.params
   const image = req.file
+  console.log(req.body)
   try {
     const existingBoard = await prisma.board.findUnique({
       where: {
@@ -568,7 +591,7 @@ export const postBoardDescription = async(req: Request, res: Response, next: Nex
       },
       data: {
         name: name ?? existingBoard?.name,
-        image: !image? null :  image?.path,
+        image: !image ? existingBoard.image : image?.path,
         description: {
           upsert: {
             create: {
