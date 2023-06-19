@@ -138,13 +138,18 @@ export const getTaskDetails = async (req: Request, res: Response, next: NextFunc
       include: {
         attachments: true,
         description: true,
+        users: {
+          include:{
+            user: true
+          }
+        }
       },
     })
 
     if (!existingTask) {
       res.status(404).json({ message: 'Task not available' })
     }
-    res.json(existingTask)
+    res.json({...existingTask, users: existingTask?.users.map(user => user.user)})
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -202,28 +207,47 @@ export const downloadTaskAttachment = async (req: Request, res: Response, next: 
   }
 }
 
-export const downloadTaskAttachment = async (req: Request, res: Response, next: NextFunction) => {
-  const { attachmentId } = req.params
+export const assignTask = async (req: Request, res: Response, next: NextFunction) => {
+  const { taskId } = req.params
   try {
-    const attachment = await prisma.taskAttachments.findUnique({
-      where: {
-        id: +attachmentId
+    const {userIds} = req.body
+
+    await prisma.task.update({
+      where:{
+        id: +taskId
+      },
+      data: {
+        users: {
+          createMany:{
+            data: userIds.map((user: number) => ({userId: user}))
+          }
+        }
       }
     })
+    
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
 
-    console.log(attachment)
-    const file = attachment?.file
+export const deleteUserFromTask = async (req: Request, res: Response, next: NextFunction) => {
+  const { taskId, userId } = req.params
+  try {
 
-
-    const filePath = `uploads/${file}`
-
-    console.log( filePath)
-
-    // res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    res.download(filePath, file)
-
-    // res.json({ message: 'success' })
+    await prisma.usersOnTasks.delete({
+      where: {
+        userId_taskId: {
+          taskId: +taskId,
+          userId: +userId
+        }
+      }
+    })
+    
+    res.json({ message: 'success' })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500

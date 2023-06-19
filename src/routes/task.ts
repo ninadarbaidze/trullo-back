@@ -4,7 +4,9 @@ import {
   addAttachments,
   deleteTaskAttachment,
   removeTaskCover,
-  downloadTaskAttachment
+  downloadTaskAttachment,
+  assignTask,
+  deleteUserFromTask
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -30,6 +32,9 @@ router.patch('/add-attachments/:taskId', upload.array('attachments'), addAttachm
 router.delete('/delete-attachments/:attachmentId', deleteTaskAttachment)
 router.delete('/task-image/:taskId', removeTaskCover)
 router.get('/task-attachments/:attachmentId', downloadTaskAttachment)
+router.patch('/assign-task/:taskId', isAuth, assignTask)
+router.delete('/delete-user-task/:taskId/:userId', isAuth, deleteUserFromTask)
+
 
 
 export default router
