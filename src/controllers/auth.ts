@@ -126,7 +126,6 @@ export const generateNewAccessToken = async (req: Request, res: Response) => {
         },
       })
     }
-    console.log(decodedToken)
 
     if (!user) return res.status(404).json({ message: 'user does not exists' })
 
@@ -185,7 +184,6 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 
   try {
     const { userId } = jwt.verify(token, process.env.ACCESS_TOKEN!) as JwtPayload
-    console.log('us', userId)
 
     const existingUser = await prisma.user.findUnique({
       where: {
@@ -227,7 +225,6 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   const { new_password, email, username, avatar, firstName, lastName } = req.body
-  console.log(new_password)
   const image = req.file!
   const { userId } = req.params
   try {
@@ -256,7 +253,6 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     }
 
     const password = new_password ? await bcrypt.hash(new_password, 12) : existingUser.password
-    console.log(password)
 
     let updatedData = {}
 
@@ -366,3 +362,5 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
     next(err)
   }
 }
+
+

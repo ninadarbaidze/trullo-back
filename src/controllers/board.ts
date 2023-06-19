@@ -566,11 +566,12 @@ export const removeBoardImage = async(req: Request, res: Response, next: NextFun
     next(err)
   }
 }
+
 export const postBoardDescription = async(req: Request, res: Response, next: NextFunction) => {
   const {description, name} = req.body
   const {boardId} = req.params
   const image = req.file
-  console.log(req.body)
+
   try {
     const existingBoard = await prisma.board.findUnique({
       where: {

@@ -8,7 +8,8 @@ import {
   updateProfile,
   getProfileInfo,
   logoutUser,
-  getAllUsers
+  getAllUsers,
+  assignTask
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -36,5 +37,6 @@ router.patch('/update-password/:userId', updatePassword)
 router.put('/update-profile/:userId', isAuth, upload.single('image'), updateProfile)
 router.get('/profile/:userId', isAuth, getProfileInfo)
 router.get('/all-users/:boardId', isAuth, getAllUsers)
+router.patch('/assign-task/:taskId', isAuth, assignTask)
 
 export default router
