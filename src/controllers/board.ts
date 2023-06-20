@@ -4,6 +4,8 @@ import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
 import { sendInvitationEmail } from 'mail'
 import { board } from 'routes'
 import { exclude } from 'utils'
+import fs from 'fs'
+
 
 const prisma = new PrismaClient()
 
@@ -546,7 +548,7 @@ export const removeUserFromBoard = async(req: Request, res: Response, next: Next
 }
 
 export const removeBoardImage = async(req: Request, res: Response, next: NextFunction) => {
-  const {boardId} = req.params
+  const {boardId, boardCover} = req.params
   try {
     await prisma.board.update({
       where: {
@@ -556,6 +558,8 @@ export const removeBoardImage = async(req: Request, res: Response, next: NextFun
         image: null
       }
     })
+
+    fs.unlinkSync('images/' + boardCover);
 
     res.json({message: 'success'})
 
@@ -585,6 +589,8 @@ export const postBoardDescription = async(req: Request, res: Response, next: Nex
     if(!existingBoard) {
      return  res.status(404).json({message: 'Incorrect board id'})
     }
+
+   
 
     const response = await prisma.board.update({
       where: {

@@ -26,11 +26,11 @@ const upload = multer({ storage: storageConfig })
 
 const router = express.Router()
 
-router.post('/task-detail/:taskId', upload.single( 'image'), postTaskDetails)
+router.post('/task-detail/:taskId', upload.single('image'), postTaskDetails)
 router.get('/task-detail/:taskId', getTaskDetails)
 router.patch('/add-attachments/:taskId', upload.array('attachments'), addAttachments)
 router.delete('/delete-attachments/:attachmentId', deleteTaskAttachment)
-router.delete('/task-image/:taskId', removeTaskCover)
+router.delete('/task-image/:taskId/uploads/:imageName', removeTaskCover)
 router.get('/task-attachments/:attachmentId', downloadTaskAttachment)
 router.patch('/assign-task/:taskId', isAuth, assignTask)
 router.delete('/delete-user-task/:taskId/:userId', isAuth, deleteUserFromTask)

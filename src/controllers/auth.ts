@@ -4,6 +4,8 @@ import jwt, { Jwt, JwtPayload } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { sendConfirmationEmail } from 'mail'
 import { isTokenExpired } from 'utils'
+import fs from 'fs'
+
 
 const prisma = new PrismaClient()
 
@@ -238,6 +240,11 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       return res.status(404).json({
         message: 'User does not exists',
       })
+    }
+
+    if(image.path) {
+      existingUser?.avatar &&  fs.unlinkSync(existingUser?.avatar);
+
     }
 
     const userWithSameEmailOrUsername = await prisma.user.findFirst({

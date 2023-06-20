@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
 import { task } from 'routes'
 import path from 'path'
+import fs from 'fs'
 
 const prisma = new PrismaClient()
 
@@ -25,7 +26,12 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
       res.status(404).json({ message: 'Task not available' })
     }
 
-    await prisma.task.update({
+    if(image?.path) {
+      existingTask?.image &&  fs.unlinkSync(existingTask?.image);
+    }
+
+
+    const response = await prisma.task.update({
       where: {
         id: +taskId,
       },
@@ -45,7 +51,7 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
       },
     })
 
-    res.json(existingTask)
+    res.json(response)
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -112,13 +118,15 @@ export const deleteTaskAttachment = async (req: Request, res: Response, next: Ne
   const { attachmentId } = req.params
   
   try {
-    await prisma.taskAttachments.delete({
+   const response = await prisma.taskAttachments.delete({
       where: {
         id: +attachmentId,
       },
     })
 
-    res.json({ message: 'success' })
+    fs.unlinkSync('uploads/' + response.file);
+
+    res.json({ message: 'success', response })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -159,7 +167,8 @@ export const getTaskDetails = async (req: Request, res: Response, next: NextFunc
 }
 
 export const removeTaskCover = async (req: Request, res: Response, next: NextFunction) => {
-  const { taskId } = req.params
+  const { taskId, imageName } = req.params
+
   try {
     await prisma.task.update({
       where: {
@@ -169,6 +178,10 @@ export const removeTaskCover = async (req: Request, res: Response, next: NextFun
         image: null,
       },
     })
+
+
+    fs.unlinkSync('uploads/' + imageName);
+
 
     res.json({ message: 'success' })
   } catch (err: any) {

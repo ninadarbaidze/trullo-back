@@ -50,7 +50,7 @@ router.post('/send-board-invitations/', isAuth, sendInvitationToBoard)
 router.post('/verify-board', isAuth, verifyInvitation)
 router.get('/board-detail/:boardId', isAuth, getBoardData)
 router.patch('/remove-board-user', isAuth, removeUserFromBoard)
-router.patch('/remove-board-image/:boardId', isAuth, removeBoardImage)
+router.patch('/remove-board-image/:boardId/images/:boardCover', isAuth, removeBoardImage)
 router.patch('/update-board/:boardId', isAuth,  upload.single('image'), postBoardDescription)
 
 export default router
