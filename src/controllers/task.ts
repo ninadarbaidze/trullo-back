@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 
 export const postTaskDetails = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
-  const { name, description } = req.body
+  const { name, description, difficulty } = req.body
   const image = req.file
 
   try {
@@ -48,6 +48,7 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
           },
         },
         image: !image ? existingTask?.image : image?.path,
+        difficulty: difficulty ? +difficulty :  existingTask?.difficulty
       },
     })
 

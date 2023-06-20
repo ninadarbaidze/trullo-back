@@ -501,7 +501,7 @@ export const getBoardData = async (req: Request, res: Response, next: NextFuncti
             user: true,
           },
         },
-        description: true
+        description: true,
       },
     })
     const boardOwner = boardWithUsers?.users.find(
