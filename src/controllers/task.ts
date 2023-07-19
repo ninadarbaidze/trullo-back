@@ -26,10 +26,9 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
       res.status(404).json({ message: 'Task not available' })
     }
 
-    if(image?.path) {
-      existingTask?.image &&  fs.unlinkSync(existingTask?.image);
+    if (image?.path) {
+      existingTask?.image && fs.unlinkSync(existingTask?.image)
     }
-
 
     const response = await prisma.task.update({
       where: {
@@ -48,7 +47,7 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
           },
         },
         image: !image ? existingTask?.image : image?.path,
-        difficulty: difficulty ? +difficulty :  existingTask?.difficulty
+        difficulty: difficulty ? +difficulty : existingTask?.difficulty,
       },
     })
 
@@ -78,8 +77,8 @@ export const addAttachments = async (req: Request, res: Response, next: NextFunc
         id: +taskId,
       },
       include: {
-        attachments: true
-      }
+        attachments: true,
+      },
     })
 
     if (!existingTask) {
@@ -87,7 +86,7 @@ export const addAttachments = async (req: Request, res: Response, next: NextFunc
     }
 
     if (attachment.length > 0) {
-     const response = await prisma.task.update({
+      const response = await prisma.task.update({
         where: {
           id: +taskId,
         },
@@ -104,9 +103,7 @@ export const addAttachments = async (req: Request, res: Response, next: NextFunc
       })
     }
 
-   
-
-    res.json({message: 'success'})
+    res.json({ message: 'success' })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -117,15 +114,15 @@ export const addAttachments = async (req: Request, res: Response, next: NextFunc
 
 export const deleteTaskAttachment = async (req: Request, res: Response, next: NextFunction) => {
   const { attachmentId } = req.params
-  
+
   try {
-   const response = await prisma.taskAttachments.delete({
+    const response = await prisma.taskAttachments.delete({
       where: {
         id: +attachmentId,
       },
     })
 
-    fs.unlinkSync('uploads/' + response.file);
+    fs.unlinkSync('uploads/' + response.file)
 
     res.json({ message: 'success', response })
   } catch (err: any) {
@@ -148,17 +145,22 @@ export const getTaskDetails = async (req: Request, res: Response, next: NextFunc
         attachments: true,
         description: true,
         users: {
-          include:{
-            user: true
-          }
-        }
+          include: {
+            user: true,
+          },
+        },
+        labels: {
+          include: {
+            label: true,
+          },
+        },
       },
     })
 
     if (!existingTask) {
       res.status(404).json({ message: 'Task not available' })
     }
-    res.json({...existingTask, users: existingTask?.users.map(user => user.user)})
+    res.json({ ...existingTask, users: existingTask?.users.map((user) => user.user) })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -180,9 +182,7 @@ export const removeTaskCover = async (req: Request, res: Response, next: NextFun
       },
     })
 
-
-    fs.unlinkSync('uploads/' + imageName);
-
+    fs.unlinkSync('uploads/' + imageName)
 
     res.json({ message: 'success' })
   } catch (err: any) {
@@ -198,21 +198,18 @@ export const downloadTaskAttachment = async (req: Request, res: Response, next: 
   try {
     const attachment = await prisma.taskAttachments.findUnique({
       where: {
-        id: +attachmentId
-      }
+        id: +attachmentId,
+      },
     })
 
     console.log(attachment)
     const file = attachment?.file
 
-
     const filePath = `uploads/${file}`
 
-    console.log( filePath)
-
+    console.log(filePath)
 
     res.download(filePath, file)
-
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -224,21 +221,21 @@ export const downloadTaskAttachment = async (req: Request, res: Response, next: 
 export const assignTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
   try {
-    const {userIds} = req.body
+    const { userIds } = req.body
 
     await prisma.task.update({
-      where:{
-        id: +taskId
+      where: {
+        id: +taskId,
       },
       data: {
         users: {
-          createMany:{
-            data: userIds.map((user: number) => ({userId: user}))
-          }
-        }
-      }
+          createMany: {
+            data: userIds.map((user: number) => ({ userId: user })),
+          },
+        },
+      },
     })
-    
+
     res.json({ message: 'success' })
   } catch (err: any) {
     if (!err.statusCode) {
@@ -251,17 +248,118 @@ export const assignTask = async (req: Request, res: Response, next: NextFunction
 export const deleteUserFromTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId, userId } = req.params
   try {
-
     await prisma.usersOnTasks.delete({
       where: {
         userId_taskId: {
           taskId: +taskId,
-          userId: +userId
-        }
-      }
+          userId: +userId,
+        },
+      },
     })
-    
+
     res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const addLabel = async (req: Request, res: Response, next: NextFunction) => {
+  const { boardId } = req.params
+  const { color, title } = req.body
+  try {
+    await prisma.label.create({
+      data: {
+        color,
+        title,
+        board: {
+          connect: {
+            id: +boardId,
+          },
+        },
+      },
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const assignLabel = async (req: Request, res: Response, next: NextFunction) => {
+  const { taskId, labelId } = req.params
+  try {
+    await prisma.labelsOnTasks.create({
+      data: {
+        labelId: +labelId,
+        taskId: +taskId,
+      },
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const removeLabel = async (req: Request, res: Response, next: NextFunction) => {
+  const { taskId, labelId } = req.params
+  try {
+    await prisma.labelsOnTasks.delete({
+      where: {
+        taskId_labelId: {
+          labelId: +labelId,
+          taskId: +taskId,
+        },
+      },
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const deleteLabel = async (req: Request, res: Response, next: NextFunction) => {
+  const { labelId } = req.params
+  try {
+    await prisma.label.delete({
+      where: {
+        id: +labelId,
+      },
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const getBoardLabels = async (req: Request, res: Response, next: NextFunction) => {
+  const { boardId } = req.params
+
+  try {
+    const labels = await prisma.label.findMany({
+      where: {
+        boardId: +boardId,
+      },
+    })
+
+    res.json(labels)
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500

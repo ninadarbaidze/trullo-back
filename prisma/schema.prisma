@@ -40,6 +40,7 @@ model Board {
   boardOwnerId Int
   createdAt    DateTime          @default(now())
   description  BoardDescription?
+  labels Label[]
 }
 
 model BoardDescription {
@@ -119,6 +120,8 @@ model Label {
   title String
   color String
   tasks LabelsOnTasks[]
+  board Board @relation(fields: [boardId], references: [id])
+  boardId Int
 }
 
 model LabelsOnTasks {
