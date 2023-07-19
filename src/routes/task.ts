@@ -44,7 +44,7 @@ router.get('/board-labels/:boardId', isAuth, getBoardLabels)
 router.post('/add-label/:boardId', isAuth, addLabel)
 router.patch('/assign-label/:taskId/:labelId', isAuth, assignLabel)
 router.delete('/remove-label/:taskId/:labelId', isAuth, removeLabel)
-router.delete('/delete-label/:labelId', isAuth, deleteLabel)
+router.delete('/delete-label/:taskId/:labelId', isAuth, deleteLabel)
 
 
 

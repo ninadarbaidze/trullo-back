@@ -332,13 +332,19 @@ export const removeLabel = async (req: Request, res: Response, next: NextFunctio
 }
 
 export const deleteLabel = async (req: Request, res: Response, next: NextFunction) => {
-  const { labelId } = req.params
+  const { labelId, taskId } = req.params
   try {
+
+   
+
     await prisma.label.delete({
       where: {
-        id: +labelId,
+        id:+labelId
       },
     })
+
+  
+
 
     res.json({ message: 'success' })
   } catch (err: any) {
