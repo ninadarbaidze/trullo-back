@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
-import { task } from 'routes'
-import path from 'path'
 import fs from 'fs'
 
 const prisma = new PrismaClient()
@@ -61,16 +59,11 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
 }
 export const addAttachments = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
-  const { attachments } = req.body
   const attachment = req.files as unknown as {
     image: [{ path: '' }]
     attachments: [{ path: '' }]
   }[]
-  //   const attachment = req.files
-  const parsedAttachment = attachments?.map((item) => JSON.parse(item))
 
-  console.log(attachment)
-  //   const uploadedFileIds = parsedAttachment?.map((item) => item.id)
   try {
     const existingTask = await prisma.task.findUnique({
       where: {
@@ -152,6 +145,14 @@ export const getTaskDetails = async (req: Request, res: Response, next: NextFunc
         labels: {
           include: {
             label: true,
+          },
+        },
+        comments: {
+          include: {
+            user: true,
+          },
+          orderBy: {
+            id: 'desc',
           },
         },
       },
@@ -270,7 +271,7 @@ export const addLabel = async (req: Request, res: Response, next: NextFunction) 
   const { boardId } = req.params
   const { color, title } = req.body
   try {
-    await prisma.label.create({
+    const label = await prisma.label.create({
       data: {
         color,
         title,
@@ -282,7 +283,7 @@ export const addLabel = async (req: Request, res: Response, next: NextFunction) 
       },
     })
 
-    res.json({ message: 'success' })
+    res.json(label)
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -332,19 +333,13 @@ export const removeLabel = async (req: Request, res: Response, next: NextFunctio
 }
 
 export const deleteLabel = async (req: Request, res: Response, next: NextFunction) => {
-  const { labelId, taskId } = req.params
+  const { labelId } = req.params
   try {
-
-   
-
     await prisma.label.delete({
       where: {
-        id:+labelId
+        id: +labelId,
       },
     })
-
-  
-
 
     res.json({ message: 'success' })
   } catch (err: any) {
@@ -366,6 +361,66 @@ export const getBoardLabels = async (req: Request, res: Response, next: NextFunc
     })
 
     res.json(labels)
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const postComment = async (req: Request, res: Response, next: NextFunction) => {
+  const { taskId } = req.params
+
+  const { content, userId } = req.body
+
+  try {
+    const response = await prisma.comment.create({
+      data: {
+        content,
+        taskId: +taskId,
+        userId: +userId,
+      },
+    })
+
+    res.json(response)
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+export const editComment = async (req: Request, res: Response, next: NextFunction) => {
+  const { commentId, content } = req.body
+  try {
+    await prisma.comment.update({
+      where: {
+        id: +commentId,
+      },
+      data: {
+        content,
+      },
+    })
+
+    res.json({ message: 'success' })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
+  const { commentId } = req.params
+
+  try {
+    await prisma.comment.delete({
+      where: {
+        id: +commentId,
+      },
+    })
+    res.json({ message: 'success' })
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500

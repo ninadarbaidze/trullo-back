@@ -12,6 +12,9 @@ import {
   deleteLabel,
   removeLabel,
   getBoardLabels,
+  postComment,
+  editComment,
+  deleteComment
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -44,8 +47,12 @@ router.get('/board-labels/:boardId', isAuth, getBoardLabels)
 router.post('/add-label/:boardId', isAuth, addLabel)
 router.patch('/assign-label/:taskId/:labelId', isAuth, assignLabel)
 router.delete('/remove-label/:taskId/:labelId', isAuth, removeLabel)
-router.delete('/delete-label/:taskId/:labelId', isAuth, deleteLabel)
+router.delete('/delete-label/:labelId', isAuth, deleteLabel)
 
+
+router.post('/comment/:taskId',  postComment)
+router.patch('/edit-comment', isAuth, editComment)
+router.delete('/delete-comment/:commentId', isAuth, deleteComment)
 
 
 export default router
