@@ -15,7 +15,10 @@ import {
   getBoardData,
   removeUserFromBoard,
   postBoardDescription,
-  removeBoardImage
+  removeBoardImage,
+  getNotifications,
+  markAsSeen,
+  markAllAsSeen
 } from 'controllers'
 import express from 'express'
 import { isAuth } from 'middlewares'
@@ -52,5 +55,9 @@ router.get('/board-detail/:boardId', isAuth, getBoardData)
 router.patch('/remove-board-user', isAuth, removeUserFromBoard)
 router.patch('/remove-board-image/:boardId/images/:boardCover', isAuth, removeBoardImage)
 router.patch('/update-board/:boardId', isAuth,  upload.single('image'), postBoardDescription)
+
+router.get('/notifications/:userId', isAuth, getNotifications)
+router.patch('/mark-as-seen/:notificationId', isAuth, markAsSeen)
+router.put('/seen-all/:userId', isAuth, markAllAsSeen)
 
 export default router

@@ -6,7 +6,6 @@ import { board } from 'routes'
 import { exclude } from 'utils'
 import fs from 'fs'
 
-
 const prisma = new PrismaClient()
 
 export const reorderTask = async (req: Request, res: Response, next: NextFunction) => {
@@ -511,8 +510,7 @@ export const getBoardData = async (req: Request, res: Response, next: NextFuncti
       ...boardWithUsers,
       boardOwner: boardOwner,
       users: boardWithUsers?.users.map((user) => (exclude(user.user, ['password']), user.user)),
-      description: boardWithUsers?.description?.content
-     
+      description: boardWithUsers?.description?.content,
     }
 
     res.json(modifiedData)
@@ -524,22 +522,20 @@ export const getBoardData = async (req: Request, res: Response, next: NextFuncti
   }
 }
 
-
-export const removeUserFromBoard = async(req: Request, res: Response, next: NextFunction) => {
-  const {userId, boardId} = req.body
+export const removeUserFromBoard = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId, boardId } = req.body
   try {
     await prisma.usersOnBoards.delete({
       where: {
         userId_boardId: {
           userId,
-          boardId
-        }
-      }
+          boardId,
+        },
+      },
     })
 
-    res.json({message: 'success'})
-
-  }catch (err: any) {
+    res.json({ message: 'success' })
+  } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
     }
@@ -547,23 +543,22 @@ export const removeUserFromBoard = async(req: Request, res: Response, next: Next
   }
 }
 
-export const removeBoardImage = async(req: Request, res: Response, next: NextFunction) => {
-  const {boardId, boardCover} = req.params
+export const removeBoardImage = async (req: Request, res: Response, next: NextFunction) => {
+  const { boardId, boardCover } = req.params
   try {
     await prisma.board.update({
       where: {
-        id: +boardId
+        id: +boardId,
       },
       data: {
-        image: null
-      }
+        image: null,
+      },
     })
 
-    fs.unlinkSync('images/' + boardCover);
+    fs.unlinkSync('images/' + boardCover)
 
-    res.json({message: 'success'})
-
-  }catch (err: any) {
+    res.json({ message: 'success' })
+  } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
     }
@@ -571,30 +566,28 @@ export const removeBoardImage = async(req: Request, res: Response, next: NextFun
   }
 }
 
-export const postBoardDescription = async(req: Request, res: Response, next: NextFunction) => {
-  const {description, name} = req.body
-  const {boardId} = req.params
+export const postBoardDescription = async (req: Request, res: Response, next: NextFunction) => {
+  const { description, name } = req.body
+  const { boardId } = req.params
   const image = req.file
 
   try {
     const existingBoard = await prisma.board.findUnique({
       where: {
-        id: +boardId
+        id: +boardId,
       },
       include: {
-        description: true
-      }
+        description: true,
+      },
     })
 
-    if(!existingBoard) {
-     return  res.status(404).json({message: 'Incorrect board id'})
+    if (!existingBoard) {
+      return res.status(404).json({ message: 'Incorrect board id' })
     }
-
-   
 
     const response = await prisma.board.update({
       where: {
-        id: +boardId
+        id: +boardId,
       },
       data: {
         name: name ?? existingBoard?.name,
@@ -605,17 +598,90 @@ export const postBoardDescription = async(req: Request, res: Response, next: Nex
               content: description ?? '',
             },
             update: {
-              content: description ?? existingBoard.description?.content
-            }
-          }
-        }
-      }
+              content: description ?? existingBoard.description?.content,
+            },
+          },
+        },
+      },
     })
 
+    res.json({ message: 'success', boardDetails: response })
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
 
-    res.json({message: 'success', boardDetails: response })
 
-  }catch (err: any) {
+export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req.params
+
+  try {
+
+    const notifications = await prisma.notification.findMany({
+      where: {
+        receiverId: +userId,
+        NOT: {
+          senderId: +userId
+        }
+      },
+      include: {
+        receiver: true,
+        sender: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+      
+    })
+    res.json(notifications)
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const markAsSeen = async (req: Request, res: Response, next: NextFunction) => {
+  const { notificationId } = req.params
+
+  try {
+
+    await prisma.notification.update({
+      where: {
+        id: +notificationId
+      },
+      data: {
+        isRead: true
+      }
+    })
+    res.json()
+  } catch (err: any) {
+    if (!err.statusCode) {
+      err.statusCode = 500
+    }
+    next(err)
+  }
+}
+
+export const markAllAsSeen = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req.params
+
+  try {
+
+    await prisma.notification.updateMany({
+      where: {
+        receiverId: +userId
+      },
+      data: {
+        isRead: true
+      }
+    })
+    res.json()
+  } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
     }

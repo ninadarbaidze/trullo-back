@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client'
-import { NextFunction, Request, Response } from 'express'
+import { NextFunction, Request, Response, response } from 'express'
 import fs from 'fs'
+import { getIO } from 'socket'
+import {Notification} from 'types'
 
 const prisma = new PrismaClient()
 
@@ -150,6 +152,7 @@ export const getTaskDetails = async (req: Request, res: Response, next: NextFunc
         comments: {
           include: {
             user: true,
+            notification: true
           },
           orderBy: {
             id: 'desc',
@@ -375,7 +378,7 @@ export const postComment = async (req: Request, res: Response, next: NextFunctio
   const { content, userId } = req.body
 
   try {
-    const response = await prisma.comment.create({
+    const commentResponse = await prisma.comment.create({
       data: {
         content,
         taskId: +taskId,
@@ -383,7 +386,50 @@ export const postComment = async (req: Request, res: Response, next: NextFunctio
       },
     })
 
-    res.json(response)
+    const allUsersAssignedToTask = await prisma.task.findUnique({
+      where:{
+       id: +taskId
+      },
+      include: {
+        users: {
+          include: {
+            user: true
+          }
+        }
+      }
+    })
+    
+  
+    let notifications: Notification[] =[]
+    await Promise.all(
+      allUsersAssignedToTask!.users?.flatMap(async (user) => {
+      
+        if(userId !== user.user.id){
+
+          const response = await prisma.notification.create({
+            data: {
+              type: 'comment',
+              senderId: +userId,
+              receiverId: user.user.id,
+              commentId: commentResponse.id
+            },
+            include: {
+              receiver: true,
+              sender: true
+            }
+          });
+          notifications.push(response as unknown as Notification)
+        }
+      })
+    );
+
+
+    getIO().emit('task', {
+      action: 'comment',
+      notifications
+    })
+
+    res.json({...commentResponse})
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500
@@ -413,6 +459,7 @@ export const editComment = async (req: Request, res: Response, next: NextFunctio
 }
 export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
   const { commentId } = req.params
+  const {notificationIds} = req.body
 
   try {
     await prisma.comment.delete({
@@ -420,6 +467,13 @@ export const deleteComment = async (req: Request, res: Response, next: NextFunct
         id: +commentId,
       },
     })
+
+    await prisma.notification.deleteMany({
+      where: {
+        id: { in: notificationIds },
+      }
+    })
+
     res.json({ message: 'success' })
   } catch (err: any) {
     if (!err.statusCode) {

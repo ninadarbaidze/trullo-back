@@ -50,9 +50,9 @@ router.delete('/remove-label/:taskId/:labelId', isAuth, removeLabel)
 router.delete('/delete-label/:labelId', isAuth, deleteLabel)
 
 
-router.post('/comment/:taskId',  postComment)
+router.post('/comment/:taskId', isAuth, postComment)
 router.patch('/edit-comment', isAuth, editComment)
-router.delete('/delete-comment/:commentId', isAuth, deleteComment)
+router.patch('/delete-comment/:commentId', isAuth, deleteComment)
 
 
 export default router

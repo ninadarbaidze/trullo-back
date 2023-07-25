@@ -19,6 +19,8 @@ model User {
   avatar     String?
   comments   Comment[]
   tasks      UsersOnTasks[]
+  sentNotifications   Notification[] @relation("Sender")
+  receivedNotifications Notification[] @relation("Receiver")
 }
 
 model UsersOnBoards {
@@ -40,7 +42,7 @@ model Board {
   boardOwnerId Int
   createdAt    DateTime          @default(now())
   description  BoardDescription?
-  labels Label[]
+  labels       Label[]
 }
 
 model BoardDescription {
@@ -76,6 +78,7 @@ model Task {
   comments     Comment[]
   users        UsersOnTasks[]
   labels       LabelsOnTasks[]
+  notifications Notification[]
 
   @@index([taskPosition])
 }
@@ -104,6 +107,7 @@ model Comment {
   task      Task     @relation(fields: [taskId], references: [id])
   taskId    Int
   createdAt DateTime @default(now())
+  notification Notification[]
 }
 
 model UsersOnTasks {
@@ -116,11 +120,11 @@ model UsersOnTasks {
 }
 
 model Label {
-  id    Int             @id @default(autoincrement())
-  title String
-  color String
-  tasks LabelsOnTasks[]
-  board Board @relation(fields: [boardId], references: [id])
+  id      Int             @id @default(autoincrement())
+  title   String
+  color   String
+  tasks   LabelsOnTasks[]
+  board   Board           @relation(fields: [boardId], references: [id])
   boardId Int
 }
 
@@ -131,4 +135,20 @@ model LabelsOnTasks {
   taskId  Int
 
   @@id([taskId, labelId])
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+  receiver User @relation("Receiver", fields: [receiverId], references: [id])
+  receiverId Int
+  sender User  @relation("Sender", fields: [senderId], references: [id])
+  senderId Int
+  isRead Boolean @default(false)
+  createdAt   DateTime  @default(now())
+  type String
+  comment Comment? @relation(fields: [commentId], references: [id])
+  commentId Int?
+  task Task? @relation(fields: [taskId], references: [id])
+  taskId Int? 
+  @@index([receiverId])
 }

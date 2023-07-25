@@ -25,8 +25,13 @@ server.use(errorHandler)
 
 
 
- server.listen(3001, () =>
+ const listenToServer =server.listen(3001, () =>
   console.log(`
-  🚀 Server ready at: http://localhost:3001
-  ⭐️ See sample requests: http://pris.ly/e/ts/rest-express#3-using-the-rest-api`),
-  )
+  🚀 Server ready at: http://localhost:3001`
+  ))
+
+const io = require('./socket').init(listenToServer);
+io.on('connection', (_socket: any) => {
+  console.log('Client connected');
+  
+});
