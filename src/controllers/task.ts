@@ -225,7 +225,7 @@ export const downloadTaskAttachment = async (req: Request, res: Response, next: 
 export const assignTask = async (req: Request, res: Response, next: NextFunction) => {
   const { taskId } = req.params
   try {
-    const { userIds } = req.body
+    const { userIds, userId } = req.body
 
     await prisma.task.update({
       where: {
@@ -234,10 +234,39 @@ export const assignTask = async (req: Request, res: Response, next: NextFunction
       data: {
         users: {
           createMany: {
-            data: userIds.map((user: number) => ({ userId: user })),
+            data: userIds?.map((user: number) => ({ userId: user })),
           },
         },
       },
+    })
+
+
+    let notifications: Notification[] =[]
+    await Promise.all(
+      userIds?.map(async (user: number) => {
+      
+        if(userId !== user){
+
+          const response = await prisma.notification.create({
+            data: {
+              type: 'task',
+              senderId: +userId,
+              receiverId: user,
+              taskId: +taskId
+            },
+            include: {
+              receiver: true,
+              sender: true
+            }
+          });
+          notifications.push(response as unknown as Notification)
+        }
+      })
+    );
+
+    getIO().emit('task', {
+      action: 'assign',
+      notifications
     })
 
     res.json({ message: 'success' })
@@ -259,6 +288,16 @@ export const deleteUserFromTask = async (req: Request, res: Response, next: Next
           userId: +userId,
         },
       },
+    })
+
+    await prisma.notification.deleteMany({
+      where: {
+        AND: {
+          receiverId: +userId,
+          taskId: +taskId,
+          type: 'task'
+        }
+      }
     })
 
     res.json({ message: 'success' })
@@ -411,7 +450,8 @@ export const postComment = async (req: Request, res: Response, next: NextFunctio
               type: 'comment',
               senderId: +userId,
               receiverId: user.user.id,
-              commentId: commentResponse.id
+              commentId: commentResponse.id,
+              taskId: +taskId
             },
             include: {
               receiver: true,
@@ -459,19 +499,12 @@ export const editComment = async (req: Request, res: Response, next: NextFunctio
 }
 export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
   const { commentId } = req.params
-  const {notificationIds} = req.body
 
   try {
     await prisma.comment.delete({
       where: {
         id: +commentId,
       },
-    })
-
-    await prisma.notification.deleteMany({
-      where: {
-        id: { in: notificationIds },
-      }
     })
 
     res.json({ message: 'success' })

@@ -146,9 +146,9 @@ model Notification {
   isRead Boolean @default(false)
   createdAt   DateTime  @default(now())
   type String
-  comment Comment? @relation(fields: [commentId], references: [id])
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId Int?
-  task Task? @relation(fields: [taskId], references: [id])
+  task Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId Int? 
   @@index([receiverId])
 }

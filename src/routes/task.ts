@@ -52,7 +52,7 @@ router.delete('/delete-label/:labelId', isAuth, deleteLabel)
 
 router.post('/comment/:taskId', isAuth, postComment)
 router.patch('/edit-comment', isAuth, editComment)
-router.patch('/delete-comment/:commentId', isAuth, deleteComment)
+router.delete('/delete-comment/:commentId', isAuth, deleteComment)
 
 
 export default router
