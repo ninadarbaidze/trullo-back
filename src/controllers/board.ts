@@ -262,7 +262,20 @@ export const getBoard = async (req: Request, res: Response, next: NextFunction) 
               },
             },
 
-            tasks: true,
+            tasks: {
+              include: {
+                users: {
+                  include: {
+                    user: true
+                  }
+                },
+                labels: {
+                  include: {
+                    label: true
+                  }
+                }
+              }
+            },
             users: {
               include: {
                 user: true,
@@ -272,6 +285,7 @@ export const getBoard = async (req: Request, res: Response, next: NextFunction) 
         },
       },
     })
+
 
     if (!board) return res.status(404).json({ message: 'board not found' })
 
