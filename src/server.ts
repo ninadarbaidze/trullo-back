@@ -25,9 +25,9 @@ server.use(errorHandler)
 
 
 
- const listenToServer =server.listen(3001, () =>
+ const listenToServer =server.listen(3005, () =>
   console.log(`
-  🚀 Server ready at: http://localhost:3001`
+  🚀 Server ready at: http://localhost:3005`
   ))
 
 const io = require('./socket').init(listenToServer);
