@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE `Task` ADD COLUMN `boardId` INTEGER NOT NULL DEFAULT 1;
-
--- AddForeignKey
-ALTER TABLE `Task` ADD CONSTRAINT `Task_boardId_fkey` FOREIGN KEY (`boardId`) REFERENCES `Board`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

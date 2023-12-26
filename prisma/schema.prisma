@@ -8,147 +8,164 @@ datasource db {
 }
 
 model User {
-  id         Int             @id @default(autoincrement())
-  username   String          @unique
-  email      String          @unique
-  firstName  String
-  lastName   String
-  password   String
-  boards     UsersOnBoards[]
-  isVerified Boolean         @default(false)
-  avatar     String?
-  comments   Comment[]
-  tasks      UsersOnTasks[]
-  sentNotifications   Notification[] @relation("Sender")
-  receivedNotifications Notification[] @relation("Receiver")
+  id                    Int             @id @default(autoincrement())
+  username              String          @unique
+  email                 String          @unique
+  firstName             String
+  lastName              String
+  password              String
+  isVerified            Boolean         @default(false)
+  avatar                String?
+  comments              Comment[]
+  receivedNotifications Notification[]  @relation("Receiver")
+  sentNotifications     Notification[]  @relation("Sender")
+  boards                UsersOnBoards[]
+  tasks                 UsersOnTasks[]
 }
 
 model UsersOnBoards {
-  user    User  @relation(fields: [userId], references: [id])
   userId  Int
-  board   Board @relation(fields: [boardId], references: [id])
   boardId Int
+  board   Board @relation(fields: [boardId], references: [id])
+  user    User  @relation(fields: [userId], references: [id])
 
   @@id([userId, boardId])
+  @@index([boardId], map: "UsersOnBoards_boardId_fkey")
 }
 
 model Board {
   id           Int               @id @default(autoincrement())
   name         String
   image        String?
-  users        UsersOnBoards[]
-  columns      Column[]
-  tasks        Task[]
   boardOwnerId Int
   createdAt    DateTime          @default(now())
   description  BoardDescription?
+  columns      Column[]
   labels       Label[]
+  tasks        Task[]
+  users        UsersOnBoards[]
 }
 
 model BoardDescription {
   id      Int    @id @default(autoincrement())
   content String @db.Text
-  board   Board  @relation(fields: [boardId], references: [id])
   boardId Int    @unique
+  board   Board  @relation(fields: [boardId], references: [id])
 }
 
 model Column {
   id             Int    @id @default(autoincrement())
   title          String @db.VarChar(255)
-  board          Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   boardId        Int
   columnPosition Int
+  board          Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tasks          Task[]
 
   @@index([columnPosition])
+  @@index([boardId], map: "Column_boardId_fkey")
 }
 
 model Task {
-  id           Int               @id @default(autoincrement())
-  taskPosition Int
-  content      String
-  image        String?
-  column       Column?           @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  columnId     Int?
-  board        Board             @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  boardId      Int               @default(1)
-  difficulty   Int?
-  description  TaskDescription?
-  attachments  TaskAttachments[]
-  comments     Comment[]
-  users        UsersOnTasks[]
-  labels       LabelsOnTasks[]
+  id            Int               @id @default(autoincrement())
+  taskPosition  Int
+  content       String
+  image         String?
+  columnId      Int?
+  boardId       Int               @default(1)
+  difficulty    Int?
+  comments      Comment[]
+  labels        LabelsOnTasks[]
   notifications Notification[]
+  board         Board             @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  column        Column?           @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  attachments   TaskAttachments[]
+  description   TaskDescription?
+  users         UsersOnTasks[]
 
   @@index([taskPosition])
+  @@index([boardId], map: "Task_boardId_fkey")
+  @@index([columnId], map: "Task_columnId_fkey")
 }
 
 model TaskDescription {
   id      Int    @id @default(autoincrement())
   content String @db.Text
-  Task    Task   @relation(fields: [taskId], references: [id])
   taskId  Int    @unique
+  Task    Task   @relation(fields: [taskId], references: [id])
 }
 
 model TaskAttachments {
   id        Int      @id @default(autoincrement())
   file      String?
-  task      Task     @relation(references: [id], fields: [taskId])
   taskId    Int
   type      Int
   createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id])
+
+  @@index([taskId], map: "TaskAttachments_taskId_fkey")
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String   @db.Text
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  task      Task     @relation(fields: [taskId], references: [id])
-  taskId    Int
-  createdAt DateTime @default(now())
+  id           Int            @id @default(autoincrement())
+  content      String         @db.Text
+  userId       Int
+  taskId       Int
+  createdAt    DateTime       @default(now())
+  task         Task           @relation(fields: [taskId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
   notification Notification[]
+
+  @@index([taskId], map: "Comment_taskId_fkey")
+  @@index([userId], map: "Comment_userId_fkey")
 }
 
 model UsersOnTasks {
-  user   User @relation(fields: [userId], references: [id])
   userId Int
-  task   Task @relation(fields: [taskId], references: [id])
   taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
 
   @@id([userId, taskId])
+  @@index([taskId], map: "UsersOnTasks_taskId_fkey")
 }
 
 model Label {
   id      Int             @id @default(autoincrement())
   title   String
   color   String
-  tasks   LabelsOnTasks[]
-  board   Board           @relation(fields: [boardId], references: [id])
   boardId Int
+  board   Board           @relation(fields: [boardId], references: [id])
+  tasks   LabelsOnTasks[]
+
+  @@index([boardId], map: "Label_boardId_fkey")
 }
 
 model LabelsOnTasks {
-  label   Label @relation(fields: [labelId], references: [id])
   labelId Int
-  task    Task  @relation(fields: [taskId], references: [id])
   taskId  Int
+  label   Label @relation(fields: [labelId], references: [id])
+  task    Task  @relation(fields: [taskId], references: [id])
 
   @@id([taskId, labelId])
+  @@index([labelId], map: "LabelsOnTasks_labelId_fkey")
 }
 
 model Notification {
-  id Int @id @default(autoincrement())
-  receiver User @relation("Receiver", fields: [receiverId], references: [id])
+  id         Int      @id @default(autoincrement())
   receiverId Int
-  sender User  @relation("Sender", fields: [senderId], references: [id])
-  senderId Int
-  isRead Boolean @default(false)
-  createdAt   DateTime  @default(now())
-  type String
-  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId Int?
-  task Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskId Int? 
+  senderId   Int
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  type       String
+  commentId  Int?
+  taskId     Int?
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("Receiver", fields: [receiverId], references: [id])
+  sender     User     @relation("Sender", fields: [senderId], references: [id])
+  task       Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
   @@index([receiverId])
+  @@index([commentId], map: "Notification_commentId_fkey")
+  @@index([senderId], map: "Notification_senderId_fkey")
+  @@index([taskId], map: "Notification_taskId_fkey")
 }
