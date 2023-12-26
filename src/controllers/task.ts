@@ -89,8 +89,8 @@ export const addAttachments = async (req: Request, res: Response, next: NextFunc
           attachments: {
             createMany: {
               data: attachment?.map((file) => ({
-                file: file.path.slice(8),
-                type: file.mimetype?.includes('application') ? 1 : 0,
+                file: (file as any).path.slice(8),
+                type: (file as any).mimetype?.includes('application') ? 1 : 0,
               })),
             },
           },
@@ -206,14 +206,12 @@ export const downloadTaskAttachment = async (req: Request, res: Response, next: 
       },
     })
 
-    console.log(attachment)
     const file = attachment?.file
 
     const filePath = `uploads/${file}`
 
-    console.log(filePath)
 
-    res.download(filePath, file)
+    res.download(filePath, file as any)
   } catch (err: any) {
     if (!err.statusCode) {
       err.statusCode = 500

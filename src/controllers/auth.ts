@@ -110,7 +110,6 @@ export const logoutUser = (req: Request, res: Response, next: NextFunction) => {
 export const generateNewAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken
 
-  console.log(refreshToken)
   try {
     let decodedToken
     let user
