@@ -47,7 +47,7 @@ export const postTaskDetails = async (req: Request, res: Response, next: NextFun
           },
         },
         image: !image ? existingTask?.image : image?.path,
-        difficulty: difficulty ? +difficulty : existingTask?.difficulty,
+        difficulty: difficulty !== 'null' && difficulty ? +difficulty : existingTask?.difficulty ?? null,
       },
     })
 
